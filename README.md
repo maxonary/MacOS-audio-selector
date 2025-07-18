@@ -11,7 +11,7 @@ The app runs in the menu bar.
 
 ## Download & Installation
 
-1.  Download the latest compiled application (`AirPods Sound Quality Fixer.app.zip`) from the [releases page](https://github.com/milgra/MacOS-audio-selector/releases/tag/v1.1).
+1.  Download the latest compiled application (`AirPods Sound Quality Fixer.app.zip`) from the [releases page](https://github.com/maxonary/MacOS-audio-selector/releases/tag/1.1).
 2.  Unzip the downloaded file.
 3.  Drag the `AirPods Sound Quality Fixer.app` to your Applications folder.
 
@@ -27,4 +27,4 @@ Once launched, the app will appear as an icon in your macOS menu bar.
 
 ## Support & Contributing
 
-If you encounter any issues or have suggestions for improvements, please open an issue on the [GitHub Issues page](https://github.com/milgra/MacOS-audio-selector/issues). Contributions via pull requests are also welcome!
+If you encounter any issues or have suggestions for improvements, please open an issue on the [GitHub Issues page](https://github.com/milgra/airpodssoundqualityfixer/issues). Contributions via pull requests are also welcome!
