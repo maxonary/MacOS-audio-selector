@@ -1,6 +1,6 @@
 #import "AppDelegate.h"
-#import "GBLaunchAtLogin.h"
 #import <CoreAudio/CoreAudio.h>
+#import <ServiceManagement/ServiceManagement.h>
 
 
 @interface AppDelegate ( )
@@ -119,11 +119,22 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         [prefs synchronize];
         NSLog(@"Saved device from UserDefaults: %d", forcedInputID);
 
-        UInt32 propertySize = sizeof(UInt32);
-        AudioHardwareSetProperty(
-            kAudioHardwarePropertyDefaultInputDevice ,
-            propertySize ,
-            &forcedInputID );
+        // NEW: Use AudioObjectSetPropertyData instead of AudioHardwareSetProperty
+        AudioObjectPropertyAddress defaultInputAddress = {
+            kAudioHardwarePropertyDefaultInputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+        
+        UInt32 dataSize = sizeof(UInt32);
+        AudioObjectSetPropertyData(
+            kAudioObjectSystemObject,
+            &defaultInputAddress,
+            0,
+            NULL,
+            dataSize,
+            &forcedInputID
+        );
         
         // show forcing
 
@@ -171,11 +182,21 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         kAudioHardwarePropertyDevices,
         &propertySize,
         NULL );
-    
-    AudioHardwareGetProperty(
+
+    // NEW: Use AudioObjectGetPropertyData instead of AudioHardwareGetProperty
+    AudioObjectPropertyAddress devicesAddress = {
         kAudioHardwarePropertyDevices,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster
+    };
+    AudioObjectGetPropertyData(
+        kAudioObjectSystemObject,
+        &devicesAddress,
+        0,
+        NULL,
         &propertySize,
-        dev_array);
+        dev_array
+    );
     
     numberOfDevices = ( propertySize / sizeof( AudioDeviceID ) );
     
@@ -214,13 +235,19 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
 
         propertySize = 256;
         
-        AudioDeviceGetPropertyInfo(
-            oneDeviceID ,
-            0 ,
-            true ,
-            kAudioDevicePropertyStreams ,
-            &propertySize ,
-            NULL );
+        // NEW: Use AudioObjectGetPropertyDataSize instead of AudioDeviceGetPropertyInfo
+        AudioObjectPropertyAddress streamsAddress = {
+            kAudioDevicePropertyStreams,
+            kAudioObjectPropertyScopeInput,
+            kAudioObjectPropertyElementMaster
+        };
+        AudioObjectGetPropertyDataSize(
+            oneDeviceID,
+            &streamsAddress,
+            0,
+            NULL,
+            &propertySize
+        );
 
         // if there are any input streams, then it is an input
 
@@ -231,13 +258,20 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
 
             propertySize = 256;
             
-            AudioDeviceGetProperty(
-                oneDeviceID ,
-                0 ,
-                false ,
-                kAudioDevicePropertyDeviceName ,
-                &propertySize ,
-                deviceName );
+            // NEW: Use AudioObjectGetPropertyData instead of AudioDeviceGetProperty
+            AudioObjectPropertyAddress nameAddress = {
+                kAudioDevicePropertyDeviceName,
+                kAudioObjectPropertyScopeGlobal,
+                kAudioObjectPropertyElementMaster
+            };
+            AudioObjectGetPropertyData(
+                oneDeviceID,
+                &nameAddress,
+                0,
+                NULL,
+                &propertySize,
+                deviceName
+            );
 
             NSLog( @"found input device : %s  %u\n" , deviceName , (unsigned int)oneDeviceID );
             
@@ -280,13 +314,23 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
     // get the default output device
     // if it is not the built in, change
     
-    propertySize = sizeof( deviceID );
-    
-    AudioHardwareGetProperty(
+    // NEW: Use AudioObjectGetPropertyData instead of AudioHardwareGetProperty
+    AudioObjectPropertyAddress defaultInputAddress = {
         kAudioHardwarePropertyDefaultInputDevice,
-        &propertySize,
-        &deviceID);
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster
+    };
     
+    UInt32 dataSize = sizeof(deviceID);
+    AudioObjectGetPropertyData(
+        kAudioObjectSystemObject,
+        &defaultInputAddress,
+        0,
+        NULL,
+        &dataSize,
+        &deviceID
+    );
+
     NSLog( @"default input device is %u" , deviceID );
     
     if ( !paused && deviceID != forcedInputID )
@@ -295,10 +339,14 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         NSLog( @"forcing input device for default : %u" , forcedInputID );
 
         UInt32 propertySize = sizeof(UInt32);
-        AudioHardwareSetProperty(
-            kAudioHardwarePropertyDefaultInputDevice ,
-            propertySize ,
-            &forcedInputID );
+        AudioObjectSetPropertyData(
+            kAudioObjectSystemObject,
+            &defaultInputAddress,
+            0,
+            NULL,
+            propertySize,
+            &forcedInputID
+        );
         
         // show forcing
 
@@ -366,21 +414,25 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
 
 - (void)toggleStartupItem
 {
-    if ( [GBLaunchAtLogin isLoginItem] )
-    {
-        [GBLaunchAtLogin removeAppFromLoginItems];
+    SMAppService *loginItemService = [SMAppService mainAppService];
+    if (loginItemService.status == SMAppServiceStatusEnabled) {
+        NSError *error = nil;
+        if (![loginItemService unregisterAndReturnError:&error]) {
+            NSLog(@"Failed to unregister login item: %@", error);
+        }
+    } else {
+        NSError *error = nil;
+        if (![loginItemService registerAndReturnError:&error]) {
+            NSLog(@"Failed to register login item: %@", error);
+        }
     }
-    else
-    {
-        [GBLaunchAtLogin addAppAsLoginItem];
-    }
-    
     [self updateStartupItemState];
 }
 
 - (void)updateStartupItemState
 {
-    [startupItem setState: [GBLaunchAtLogin isLoginItem] ? NSControlStateValueOn : NSControlStateValueOff];
+    SMAppService *loginItemService = [SMAppService mainAppService];
+    [startupItem setState: (loginItemService.status == SMAppServiceStatusEnabled) ? NSControlStateValueOn : NSControlStateValueOff];
 }
 
 - (void)menuWillOpen:(NSMenu *)menu
