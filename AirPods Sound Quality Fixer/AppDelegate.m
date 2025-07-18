@@ -52,7 +52,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         [prefs synchronize];
     }
     
-    forcedInputID = readenId;
+    forcedInputID = (UInt32)readenId; // Explicit cast to UInt32
     
     NSLog(@"Loaded device from UserDefaults: %d", forcedInputID);
 
@@ -60,15 +60,15 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
     [ image setTemplate : YES ];
 
     statusItem = [ [ NSStatusBar systemStatusBar ] statusItemWithLength : NSVariableStatusItemLength ];
-    [ statusItem setToolTip : @"AirPods Audio Quality & Battery Life Fixer" ];
-    [ statusItem setImage : image ];
+    statusItem.button.toolTip = @"AirPods Audio Quality & Battery Life Fixer"; // NEW: Use button.toolTip
+    statusItem.button.image = image; // NEW: Use button.image
 
     // add listener for detecting when input device is changed
 
     AudioObjectPropertyAddress inputDeviceAddress = {
         kAudioHardwarePropertyDefaultInputDevice,
         kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster
+        kAudioObjectPropertyElementMain
     };
 
     AudioObjectAddPropertyListener(
@@ -80,7 +80,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
    AudioObjectPropertyAddress runLoopAddress = {
         kAudioHardwarePropertyRunLoop,
         kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster
+        kAudioObjectPropertyElementMain
     };
 
     CFRunLoopRef runLoop = NULL;
@@ -123,7 +123,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         AudioObjectPropertyAddress defaultInputAddress = {
             kAudioHardwarePropertyDefaultInputDevice,
             kAudioObjectPropertyScopeGlobal,
-            kAudioObjectPropertyElementMaster
+            kAudioObjectPropertyElementMain
         };
         
         UInt32 dataSize = sizeof(UInt32);
@@ -178,20 +178,29 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
     int numberOfDevices = 0;
     char deviceName[256];
     
-    AudioHardwareGetPropertyInfo(
-        kAudioHardwarePropertyDevices,
-        &propertySize,
-        NULL );
-
-    // NEW: Use AudioObjectGetPropertyData instead of AudioHardwareGetProperty
-    AudioObjectPropertyAddress devicesAddress = {
+    // NEW: Get the size of the array of audio devices using AudioObjectGetPropertyDataSize
+    AudioObjectPropertyAddress devicesAddressSize = {
         kAudioHardwarePropertyDevices,
         kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster
+        kAudioObjectPropertyElementMain
+    };
+    AudioObjectGetPropertyDataSize(
+        kAudioObjectSystemObject,
+        &devicesAddressSize,
+        0,
+        NULL,
+        &propertySize
+    );
+    
+    // NEW: Get the array of audio devices using AudioObjectGetPropertyData
+    AudioObjectPropertyAddress devicesAddressData = {
+        kAudioHardwarePropertyDevices,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
     };
     AudioObjectGetPropertyData(
         kAudioObjectSystemObject,
-        &devicesAddress,
+        &devicesAddressData,
         0,
         NULL,
         &propertySize,
@@ -239,7 +248,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
         AudioObjectPropertyAddress streamsAddress = {
             kAudioDevicePropertyStreams,
             kAudioObjectPropertyScopeInput,
-            kAudioObjectPropertyElementMaster
+            kAudioObjectPropertyElementMain
         };
         AudioObjectGetPropertyDataSize(
             oneDeviceID,
@@ -262,7 +271,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
             AudioObjectPropertyAddress nameAddress = {
                 kAudioDevicePropertyDeviceName,
                 kAudioObjectPropertyScopeGlobal,
-                kAudioObjectPropertyElementMaster
+                kAudioObjectPropertyElementMain
             };
             AudioObjectGetPropertyData(
                 oneDeviceID,
@@ -318,7 +327,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
     AudioObjectPropertyAddress defaultInputAddress = {
         kAudioHardwarePropertyDefaultInputDevice,
         kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster
+        kAudioObjectPropertyElementMain
     };
     
     UInt32 dataSize = sizeof(deviceID);
