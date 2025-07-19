@@ -48,7 +48,8 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
     NSInteger readenId = [prefs integerForKey: @"Device"];
     
     if (readenId == 0) {
-        [prefs setInteger:UINT32_MAX forKey: @"Device"];
+        readenId = UINT32_MAX;
+        [prefs setInteger:readenId forKey: @"Device"];
         [prefs synchronize];
     }
     
@@ -342,7 +343,7 @@ OSStatus callbackFunction(  AudioObjectID inObjectID,
 
     NSLog( @"default input device is %u" , deviceID );
     
-    if ( !paused && deviceID != forcedInputID )
+    if ( !paused && forcedInputID != UINT32_MAX && deviceID != forcedInputID )
     {
 
         NSLog( @"forcing input device for default : %u" , forcedInputID );
